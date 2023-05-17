@@ -6,6 +6,16 @@
 
 // da togliere
 #include <search.h>
+#include <time.h>
+
+// nel progetto vero dovremmo dividere le funzioni per
+// l'heap, gli scrittori e i consumatori in files diversi.
+
+int stringhe_uniche = 0;
+
+// da fare: impedire l'accesso simultaneo allo heap
+// verificare quali sono effettivamente le sezioni critiche
+// per il resto dovrebbe funzionare
 
 
 void aggiungi(char *s){
@@ -18,6 +28,7 @@ void aggiungi(char *s){
 	if(item == NULL){
 		ENTRY *success = hsearch(new_item, ENTER);
 		if(success == NULL) termina("Errore hashtable");
+		stringhe_uniche++;
 		return;
 	}
 	item->data += 1;
@@ -35,8 +46,10 @@ int conta(char *s){
 	return *occ;
 }
 
+
+
 typedef struct {
-	char ***buffer;
+	char **buffer;
 	int *index;
 	pthread_mutex_t *mutex;
 	sem_t *sem_free_slots;
@@ -49,9 +62,22 @@ void caposcrittore(void *args){
 	// riceve cose da una named pipe
 }
 
-void scrittore(void *args){
-	char * stringa = (char *) args;
-	aggiungi(stringa);
+void *scrittore(void *args){
+	dati_scrittore *a = (dati_scrittore *) args;
+	printf("Scrittore %d partito\n", gettid());
+	while(true){
+		char * stringa;
+		xsem_wait(a->sem_data_items, QUI);
+		{
+			xpthread_mutex_lock(a->mutex, QUI);
+			stringa = a->buffer[*(a->index) %PC_buffer_len];
+			a->index++;
+			if(stringa == NULL) return NULL;
+			aggiungi(stringa);
+			xpthread_mutex_unlock(a->mutex, QUI);
+		}
+		xsem_post(a->sem_free_slots, QUI);
+	}
 }
 
 
@@ -71,18 +97,17 @@ int main(int argc, char **argv){
 	//xpthread_create(capo_scrittore, NULL, *caposcrittore, &arg, QUI);
 	pthread_t t[5];
 
-	printf("Inserire stringhe, scrivere \"fine\" per terminare");
+	printf("Inserire stringhe, scrivere \"fine\" per terminare\n");
 	stringhe[0] = malloc(11*sizeof(char));
-	if(stringhe[0] == NULL) termina("Errore alloc");
+	// bisogna sempre controllare se la malloc ha funzionato
+	//if(stringhe[0] == NULL) termina("Errore alloc");
 	scanf("%10[^\n]", stringhe[0]);
-	int string_num = 0;
+	int static string_num;
 	for(int i = 0; i< Num_elem; i++){
 		if(strcasecmp(stringhe[i], "fine") == 0){
 			string_num = i;
 			break;
 		}
-		//chiamiamo un singolo thread scrittore per fargli scrivere
-		// sulla tabella hash
 		stringhe[i+1] = malloc(11*sizeof(char));
 		if(stringhe[i+1] == NULL) termina("Errore alloc");
 		scanf(" %10[^\n]", stringhe[i+1]);
@@ -101,7 +126,6 @@ int main(int argc, char **argv){
 	pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;
 	// dichiarare il buffer
 	char *buffer[PC_buffer_len];
-
 	dati_scrittore a[3];
 
 	//chiamiamo tre thread scrittori
@@ -109,17 +133,21 @@ int main(int argc, char **argv){
 		a[i].index = &cindex;
 		a[i].sem_free_slots = &sem_free_slots;
 		a[i].sem_data_items = &sem_data_items;
-		a[i].buffer = &buffer;
+		a[i].buffer = buffer;
 		a[i].mutex = &mu;
 		xpthread_create(&t[i], NULL, *scrittore, &a[i], QUI);
 	}
 
 	//diamogli in pasto le stringhe
-	
-	for(int i = 0; i< string_num; i++){
+	for(int i = string_num; i < string_num + 3; i++){
+		stringhe[i] = NULL;
+	}
+	printf("Il numero di stringhe è %d", string_num);
+	for(int i = 0; i< string_num+3; i++){
+		printf("Sto passando la stringa %s agli scrittori\n", stringhe[i]);
 		xsem_wait(&sem_free_slots, QUI);
 		xpthread_mutex_lock(&mu, QUI);
-		buffer[pindex] = stringhe[i];
+		buffer[pindex % PC_buffer_len] = stringhe[i];
 		pindex++;
 		xpthread_mutex_unlock(&mu, QUI);
 		xsem_post(&sem_data_items, QUI);
@@ -129,6 +157,18 @@ int main(int argc, char **argv){
 	printf("Cerca una stringa: \n");
 	scanf(" %10[^\n]", s);
 	while(strcasecmp(s, "fine") != 0){
-		cerca(s);
+		int res = conta(s);
+		printf("Trovata %d volte\n", res);
+		scanf(" %10[^\n]", s);
 	}
+
+	hdestroy();
+	
+	printf("Stringhe uniche: %d", stringhe_uniche);
+	for(int i = 0; i<string_num; i++){
+		free(stringhe[i]);
+	}
+	free(stringhe);
+	return 0;
 }
+
