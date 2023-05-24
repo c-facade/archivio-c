@@ -32,6 +32,8 @@ def main(file_scritture, file_letture):
     # apriamo il file di testo contenente 
     # le stringhe da aggiungere
 
+    print("Inizio lettura")
+
     with open(file_scritture, "r") as fs:
         for linea in fs:
             # converto la linea in una sequenza di byte
@@ -39,13 +41,22 @@ def main(file_scritture, file_letture):
             
             # prima invio la lunghezza della stringa
             bs = struct.pack("<i", len(linea))
-            os.write(fs, bs)
-            for char in linea:
-                bs = struct.pack("c", char)
+            os.write(cs, bs)
+            l = str.encode(linea);
+            print(type(l))
+            for char in l:
+                print("Char =", char, "type = ", type(char))
+                bs = struct.pack("b", char)
                 os.write(cs, bs)
 
-    # ora diamogli da leggere
+    print("file inviato a caposcrittore")
+    # probabilmente questo non è necessario
+    bs = struct.pack("<i", 0);
+    os.close(cs)
+    os.unlink(Caposcrittore)
 
+    # ora diamogli da leggere
+    '''
     cl = os.open(Capolettore, os.O_WRONLY)
 
     with open(file_letture, "r") as fl:
@@ -55,11 +66,13 @@ def main(file_scritture, file_letture):
 
             bs= struct.pack("<i", len(linea))
 
-            os.write(fl, bs)
+            os.write(cl, bs)
             for char in linea:
                 bs = struct.pack("c", char)
                 os.write(cl, bs)
-    os.unlink(Caposcrittore)
+    
+    os.unlink(Capolettore)
+    '''
 
 # lancio del main
 
