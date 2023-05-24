@@ -43,9 +43,8 @@ def main(file_scritture, file_letture):
             bs = struct.pack("<i", len(linea))
             os.write(cs, bs)
             l = str.encode(linea);
-            print(type(l))
             for char in l:
-                print("Char =", char, "type = ", type(char))
+                # print("Char =", char, "type = ", type(char))
                 bs = struct.pack("b", char)
                 os.write(cs, bs)
 
