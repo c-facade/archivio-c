@@ -55,7 +55,8 @@ def main(file_scritture, file_letture):
     os.unlink(Caposcrittore)
 
     # ora diamogli da leggere
-    '''
+   
+    os.mkfifo(Capolettore)
     cl = os.open(Capolettore, os.O_WRONLY)
 
     with open(file_letture, "r") as fl:
@@ -63,15 +64,17 @@ def main(file_scritture, file_letture):
             # converto la linea in una sequenza di byte
             # e la scrivo nella pipe
 
-            bs= struct.pack("<i", len(linea))
-
+             # prima invio la lunghezza della stringa
+            bs = struct.pack("<i", len(linea))
             os.write(cl, bs)
-            for char in linea:
-                bs = struct.pack("c", char)
+            l = str.encode(linea);
+            for char in l:
+                bs = struct.pack("b", char)
                 os.write(cl, bs)
-    
+
+    print("file inviato a capolettore");
+    os.close(cl);
     os.unlink(Capolettore)
-    '''
 
 # lancio del main
 

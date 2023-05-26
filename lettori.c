@@ -1,29 +1,25 @@
 #include "xerrori.h"
 
-#define Caposcrittore "caposc"
+#define Capolettore "capolet"
 #define PC_buffer_len 10
 
-// iniziamo con una versione molto semplice in cui il
-// capo scrittore invia le stringhe e gli scrittori le leggono
-
-// NOTE DAL FORUM
-// Le condition variables vanno usate obbligatoriamente per gestire
-// i lettori e scrittori concorrenti nel loro accesso alla
-// tabella hash condivisa, secondo quello che abbiamo visto
-// a lezione
+// Facciamo la stessa prova che con gli scrittori
+// con l'aggiunta che si scrive sul file lettori.log
 
 typedef struct {
 	int *index;
 	char **buffer;
+	FILE *f;
 	sem_t *sem_free_slots;
 	sem_t *sem_data_items;
 	pthread_mutex_t *buffer_access;
-} dati_scrittore;
+	pthread_mutex_t *file_access;
+} dati_lettore;
 
-// corpo dello scrittore
-void *sbody(void *args){
-	dati_scrittore *a = (dati_scrittore *) args;
-	
+// corpo di un lettore
+void *lbody(void *args){
+	dati_lettore *a = (dati_lettore *) args;
+
 	while(true){
 		xsem_wait(a->sem_data_items, __LINE__, __FILE__);
 		xpthread_mutex_lock(a->buffer_access, __LINE__, __FILE__);
@@ -31,9 +27,13 @@ void *sbody(void *args){
 			*(a->index) = *(a->index) + 1;
 		xpthread_mutex_unlock(a->buffer_access, __LINE__, __FILE__);
 		xsem_post(a->sem_free_slots, __LINE__, __FILE__);
-		// il segnale di terminazione è s = NULL
+		// il puntatore a NULL è il segnale di terminazione
 		if(s == NULL) break;
+		// stampo il dato che ho ricevuto
 		printf("%d : %s\n", gettid(), s);
+		xpthread_mutex_lock(a->file_access, __LINE__, __FILE__);
+		fprintf(a->f, "%s %d\n", s, gettid());
+		xpthread_mutex_unlock(a->file_access, __LINE__, __FILE__);
 		free(s);
 	}
 
@@ -41,59 +41,73 @@ void *sbody(void *args){
 	return NULL;
 }
 
+void capolettore(int numero_lettori){
 
-void caposcrittore(int numero_scrittori){
+	// apro il file di logging
 	
-	// inizializzamo semafori e mutex
+	FILE *f = xfopen("lettori.log", "w", __LINE__, __FILE__);
+
+	// inizializzazione semafori e mutex
 	
 	sem_t sem_free_slots, sem_data_items;
 	xsem_init( &sem_free_slots, 0, PC_buffer_len, __LINE__, __FILE__);
 	xsem_init( &sem_data_items, 0, 0, __LINE__, __FILE__);
 
 	pthread_mutex_t buffer_access = PTHREAD_MUTEX_INITIALIZER;
+	pthread_mutex_t file_access = PTHREAD_MUTEX_INITIALIZER;
 
 	// inizializzo buffer e indici
+	
 	int pindex = 0;
 	int cindex = 0;
-	char * buffer[PC_buffer_len];
+	char *buffer[PC_buffer_len];
 
 	// creo i dati per i thread
-	dati_scrittore a[numero_scrittori];
-	for(int i = 0; i< numero_scrittori; i++){
+	dati_lettore a[numero_lettori];
+	for(int i = 0; i < numero_lettori; i++){
 		a[i].index = &cindex;
 		a[i].buffer = buffer;
 		a[i].sem_free_slots = &sem_free_slots;
 		a[i].sem_data_items = &sem_data_items;
+		a[i].f = f;
 		a[i].buffer_access = &buffer_access;
+		a[i].file_access = &file_access;
 	}
 
-	pthread_t t[numero_scrittori];
+	// creo e faccio partire i thread
 	
-	for(int i = 0; i<numero_scrittori; i++){
-		xpthread_create(&t[i], NULL, &sbody, &a[i], __LINE__, __FILE__);
+	pthread_t t[numero_lettori];
+
+	for(int i = 0; i<numero_lettori; i++){
+		xpthread_create(&t[i], NULL, &lbody, &a[i], __LINE__, __FILE__);
 	}
 
-	int cs = open(Caposcrittore, O_RDONLY);
-	if(cs < 0) xtermina("Errore apertura caposcrittore", __LINE__, __FILE__);
+	int cl = open(Capolettore, O_RDONLY);
+	// anche qui bisogna usare un termina diverso
+	if(cl < 0) xtermina("Errore apertura capolettore", __LINE__, __FILE__);
+	
+	// leggo dalla fifo le stringhe da cercare
+	// e le invio su per il buffer ai lettori
+	
 	while(true){
 		int len;
-		ssize_t e = read(cs, &len, sizeof(len));
+		ssize_t e = read(cl, &len, sizeof(len));
 		if(e == 0) break;
-		// printf("Lunghexxa: %d\n", len);
+		
 		char * linea = malloc(sizeof(char)*(len+1));
-		// in realtà qui ci dovrò mettere un termina
-		// speciale per i thread
+		
 		if(linea == NULL) termina("Spazio esaurito");
 		for(int i = 0; i<len; i++){
-			e = read(cs, &(linea[i]), sizeof(char));
-			if(e == 0) exit(1);
+			e = read(cl, &(linea[i]), sizeof(char));
+			if(e == 0) break;
 		}
+
 		linea[len] = '\0';
-		// printf("Stringa: %s\n", linea);
+
 		char *saveptr;
 		char * token = strtok_r(linea, ".,:; \n\r\t", &saveptr);
 		while( token != NULL){
-			
+
 			// ora mando su per il buffer il token
 			char * newstring = strdup(token);
 			xsem_wait(&sem_free_slots, __LINE__, __FILE__);
@@ -102,14 +116,16 @@ void caposcrittore(int numero_scrittori){
 			pindex++;
 			xpthread_mutex_unlock(&buffer_access, __LINE__, __FILE__);
 			xsem_post(&sem_data_items, __LINE__, __FILE__);
-			token = strtok_r(NULL, ".,:; \n\r\t", &saveptr);
+			
+			// prendo un nuovo token
+			token = strtok_r(NULL, ".,:; \n\t\r", &saveptr);
 		}
+
 		free(linea);
 	}
 	
-	// mando i segnali di terminazione che sono un puntatore
-	// a NULL
-	for(int i = 0; i<numero_scrittori; i++){
+	// mando i segnali di terminazione
+	for(int i = 0; i<numero_lettori; i++){
 		xsem_wait(&sem_free_slots, __LINE__, __FILE__);
 		xpthread_mutex_lock(&buffer_access, __LINE__, __FILE__);
 		buffer[pindex%PC_buffer_len] = NULL;
@@ -117,14 +133,20 @@ void caposcrittore(int numero_scrittori){
 		xpthread_mutex_unlock(&buffer_access, __LINE__, __FILE__);
 		xsem_post(&sem_data_items, __LINE__, __FILE__);
 	}
-	for(int i = 0; i<numero_scrittori; i++){
+
+	// aspetto che i thread terminino
+	
+	for(int i = 0; i<numero_lettori; i++){
 		xpthread_join(t[i], NULL, __LINE__, __FILE__);
 	}
-	pthread_mutex_destroy(&buffer_access);
-	close(cs);
-	printf("Fine\n");
+	xpthread_mutex_destroy(&buffer_access, __LINE__, __FILE__);
+	xpthread_mutex_destroy(&file_access, __LINE__, __FILE__);
+
+	close(cl);
+	fclose(f);
+	printf("Terminazione capo lettore.\n");
 }
 
 int main(void){
-	caposcrittore(3);
+	capolettore(4);
 }
