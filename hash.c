@@ -60,6 +60,7 @@ void aggiungi(char *s, int *stringhe_uniche, rwsync *sync){
 		printf("La stringa era già presente %d volte\n", *((int *) item->data));
 		int *d = (int *) item->data;
 		*d += 1;
+		distruggi_entry(new);
 	}
 
 	// termine scrittura in tabella
@@ -70,7 +71,6 @@ void aggiungi(char *s, int *stringhe_uniche, rwsync *sync){
 	pthread_mutex_unlock(&sync->mutex);
 
 	printf("Il thread %d ha rilasciato l'accesso in scrittura.\n", gettid());
-	distruggi_entry(new);
 }
 
 int conta(char *s, rwsync *sync){

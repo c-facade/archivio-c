@@ -23,7 +23,7 @@ Funzioni che utilizzo
 Caposcrittore = "caposc"
 Capolettore = "capolet"
 
-def main(file_scritture, file_letture):
+def main(file_scritture1, file_scritture2, file_letture):
     
     if not os.path.exists(Caposcrittore):
         os.mkfifo(Caposcrittore)
@@ -38,7 +38,21 @@ def main(file_scritture, file_letture):
 
     print("Inizio lettura")
 
-    with open(file_scritture, "r") as fs:
+    with open(file_scritture1, "r") as fs:
+        for linea in fs:
+            # converto la linea in una sequenza di byte
+            # e le scrivo nella pipe
+            
+            # prima invio la lunghezza della stringa
+            bs = struct.pack("<i", len(linea))
+            os.write(cs, bs)
+            l = str.encode(linea);
+            for char in l:
+                # print("Char =", char, "type = ", type(char))
+                bs = struct.pack("b", char)
+                os.write(cs, bs)
+
+    with open(file_scritture2, "r") as fs:
         for linea in fs:
             # converto la linea in una sequenza di byte
             # e le scrivo nella pipe
@@ -87,8 +101,8 @@ def main(file_scritture, file_letture):
 
 # lancio del main
 
-if len(sys.argv)!=3:
-    print("Uso:\n\t %s file_scritture file_letture" % sys.argv[0])
+if len(sys.argv)!=4:
+    print("Uso:\n\t %s file_scritture1 file_scritture2 file_letture" % sys.argv[0])
 else:
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], sys.argv[3])
 
