@@ -6,6 +6,7 @@ e poi sulla fifo capolet
 '''
 
 import sys, os, struct
+import subprocess, signal
 
 '''
 Funzioni che utilizzo
@@ -23,8 +24,11 @@ Caposcrittore = "caposc"
 Capolettore = "capolet"
 
 def main(file_scritture, file_letture):
-   
-    os.mkfifo(Caposcrittore)
+    
+    if not os.path.exists(Caposcrittore):
+        os.mkfifo(Caposcrittore)
+
+#    p = subprocess.Popen(["valgrind", "--leak-check=full", "--show-leak-kinds=all", "--log-file=valgrind-%p.log", "./scrittori.out"])
 
     # apriamo le pipe
     cs = os.open(Caposcrittore, os.O_WRONLY)
@@ -51,12 +55,17 @@ def main(file_scritture, file_letture):
     print("file inviato a caposcrittore")
     # probabilmente questo non è necessario
     bs = struct.pack("<i", 0);
+    # s.wait()
     os.close(cs)
     os.unlink(Caposcrittore)
 
     # ora diamogli da leggere
    
-    os.mkfifo(Capolettore)
+    if not os.path.exists(Capolettore):
+        os.mkfifo(Capolettore)
+    
+ #   p = subprocess.Popen(["valgrind", "--leak-check=full", "--show-leak-kinds=all", "--log-file=valgrind-%p.log", "./lettori.out"])
+
     cl = os.open(Capolettore, os.O_WRONLY)
 
     with open(file_letture, "r") as fl:

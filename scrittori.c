@@ -1,4 +1,5 @@
 #include "xerrori.h"
+#include "lettoriescrittori.h"
 
 #define Caposcrittore "caposc"
 #define PC_buffer_len 10
@@ -18,12 +19,16 @@ typedef struct {
 	sem_t *sem_free_slots;
 	sem_t *sem_data_items;
 	pthread_mutex_t *buffer_access;
+	int *stringhe_uniche;
+	rwsync *sync;
 } dati_scrittore;
+
 
 // corpo dello scrittore
 void *sbody(void *args){
 	dati_scrittore *a = (dati_scrittore *) args;
 	
+	printf("Inizio scrittore %d\n", gettid());
 	while(true){
 		xsem_wait(a->sem_data_items, __LINE__, __FILE__);
 		xpthread_mutex_lock(a->buffer_access, __LINE__, __FILE__);
@@ -32,8 +37,12 @@ void *sbody(void *args){
 		xpthread_mutex_unlock(a->buffer_access, __LINE__, __FILE__);
 		xsem_post(a->sem_free_slots, __LINE__, __FILE__);
 		// il segnale di terminazione è s = NULL
-		if(s == NULL) break;
+		if(s == NULL){
+			printf("Lo scrittore %d ha ricevuto una stringa NULL e ha terminato.\n", gettid());
+			break;
+		}
 		printf("%d : %s\n", gettid(), s);
+		aggiungi(s, a->stringhe_uniche, a->sync);
 		free(s);
 	}
 
@@ -42,7 +51,7 @@ void *sbody(void *args){
 }
 
 
-void caposcrittore(int numero_scrittori){
+void caposcrittore(int numero_scrittori, rwsync *sync, int *stringhe_uniche){
 	
 	// inizializzamo semafori e mutex
 	
@@ -57,6 +66,9 @@ void caposcrittore(int numero_scrittori){
 	int cindex = 0;
 	char * buffer[PC_buffer_len];
 
+
+//	if(e != 0) termina("Errore creazione named pipe");
+
 	// creo i dati per i thread
 	dati_scrittore a[numero_scrittori];
 	for(int i = 0; i< numero_scrittori; i++){
@@ -65,6 +77,8 @@ void caposcrittore(int numero_scrittori){
 		a[i].sem_free_slots = &sem_free_slots;
 		a[i].sem_data_items = &sem_data_items;
 		a[i].buffer_access = &buffer_access;
+		a[i].stringhe_uniche = stringhe_uniche;
+		a[i].sync = sync;
 	}
 
 	pthread_t t[numero_scrittori];
@@ -125,6 +139,3 @@ void caposcrittore(int numero_scrittori){
 	printf("Fine\n");
 }
 
-int main(void){
-	caposcrittore(3);
-}

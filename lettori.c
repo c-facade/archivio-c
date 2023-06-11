@@ -1,4 +1,6 @@
 #include "xerrori.h"
+#include "hash.h"
+
 
 #define Capolettore "capolet"
 #define PC_buffer_len 10
@@ -14,6 +16,7 @@ typedef struct {
 	sem_t *sem_data_items;
 	pthread_mutex_t *buffer_access;
 	pthread_mutex_t *file_access;
+	rwsync *sync;
 } dati_lettore;
 
 // corpo di un lettore
@@ -30,18 +33,19 @@ void *lbody(void *args){
 		// il puntatore a NULL è il segnale di terminazione
 		if(s == NULL) break;
 		// stampo il dato che ho ricevuto
-		printf("%d : %s\n", gettid(), s);
+		printf("Lettore %d : %s\n", gettid(), s);
+		int occorrenze = conta(s, a->sync);
 		xpthread_mutex_lock(a->file_access, __LINE__, __FILE__);
-		fprintf(a->f, "%s %d\n", s, gettid());
+		fprintf(a->f, "%s %d (%d)\n", s, occorrenze, gettid());
 		xpthread_mutex_unlock(a->file_access, __LINE__, __FILE__);
 		free(s);
 	}
 
-	printf("Thread scrittore %d sta terminando\n", gettid());
+	printf("Thread lettore %d sta terminando\n", gettid());
 	return NULL;
 }
 
-void capolettore(int numero_lettori){
+void capolettore(int numero_lettori, rwsync *sync){
 
 	// apro il file di logging
 	
@@ -72,6 +76,7 @@ void capolettore(int numero_lettori){
 		a[i].f = f;
 		a[i].buffer_access = &buffer_access;
 		a[i].file_access = &file_access;
+		a[i].sync = sync;
 	}
 
 	// creo e faccio partire i thread
@@ -145,8 +150,5 @@ void capolettore(int numero_lettori){
 	close(cl);
 	fclose(f);
 	printf("Terminazione capo lettore.\n");
-}
-
-int main(void){
-	capolettore(4);
+	return;
 }
