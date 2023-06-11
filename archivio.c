@@ -1,6 +1,11 @@
 #include "xerrori.h"
 #include "lettoriescrittori.h"
 
+// questo file contiene il main
+// chiama il capolettore, che ha il ruolo di comunicare con il
+// server, e inviare i dati ai singoli thread scrittori
+
+
 #define Num_elem 1000000
 
 int main(void){
@@ -18,4 +23,5 @@ int main(void){
 	capolettore(3, &sync);
 
 }
+
 
