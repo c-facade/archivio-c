@@ -21,6 +21,8 @@ def main(file, host = HOST, port = PORT):
                 s.connect((host, port))
                 print("Connesso a ", s.getpeername())
                 # pronto per inviare la richiesta
+                a = str.encode("A")
+                s.sendall(struct.pack("c", a))
                 s.sendall(struct.pack("!i", lunghezza))
                 for carattere in line:
                     s.sendall(struct.pack("b", carattere))
@@ -29,5 +31,3 @@ def main(file, host = HOST, port = PORT):
 
 if len(sys.argv) == 2:
     main(sys.argv[1])
-
-
