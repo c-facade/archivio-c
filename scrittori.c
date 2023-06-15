@@ -51,8 +51,11 @@ void *sbody(void *args){
 }
 
 
-void caposcrittore(int numero_scrittori, rwsync *sync, int *stringhe_uniche){
+void *caposcrittore(void *args){
 	
+	printf("Inizio caposcrittore\n");
+	dati_caposcrittore *dati = (dati_caposcrittore *) args;
+	rwsync *sync = dati->sync;
 	// inizializzamo semafori e mutex
 	
 	sem_t sem_free_slots, sem_data_items;
@@ -69,41 +72,45 @@ void caposcrittore(int numero_scrittori, rwsync *sync, int *stringhe_uniche){
 
 //	if(e != 0) termina("Errore creazione named pipe");
 
+	/*
 	// creo i dati per i thread
-	dati_scrittore a[numero_scrittori];
-	for(int i = 0; i< numero_scrittori; i++){
+	dati_scrittore a[dati->numero_scrittori];
+	for(int i = 0; i< dati->numero_scrittori; i++){
 		a[i].index = &cindex;
 		a[i].buffer = buffer;
 		a[i].sem_free_slots = &sem_free_slots;
 		a[i].sem_data_items = &sem_data_items;
 		a[i].buffer_access = &buffer_access;
-		a[i].stringhe_uniche = stringhe_uniche;
+		a[i].stringhe_uniche = dati->stringhe_uniche;
 		a[i].sync = sync;
 	}
 
-	pthread_t t[numero_scrittori];
+	pthread_t t[dati->numero_scrittori];
 	
-	for(int i = 0; i<numero_scrittori; i++){
+	printf("Caposcrittore fa partire i thread scrittori\n");	
+	for(int i = 0; i<dati->numero_scrittori; i++){
 		xpthread_create(&t[i], NULL, &sbody, &a[i], __LINE__, __FILE__);
 	}
-
+	*/
 	int cs = open(Caposcrittore, O_RDONLY);
-	if(cs < 0) xtermina("Errore apertura caposcrittore", __LINE__, __FILE__);
+	if(cs < 0) xtermina("Errore apertura pipe caposcrittore", __LINE__, __FILE__);
 	while(true){
+		printf("Caposcrittore: leggendo da fifo\n");
 		int len;
 		ssize_t e = read(cs, &len, sizeof(len));
 		if(e == 0) break;
-		// printf("Lunghexxa: %d\n", len);
+		printf("Lunghexxa: %d\n", len);
 		char * linea = malloc(sizeof(char)*(len+1));
 		// in realtà qui ci dovrò mettere un termina
 		// speciale per i thread
-		if(linea == NULL) termina("Spazio esaurito");
+		if(linea == NULL) xthread_termina("Spazio esaurito", __LINE__, __FILE__);
 		for(int i = 0; i<len; i++){
 			e = read(cs, &(linea[i]), sizeof(char));
 			if(e == 0) exit(1);
 		}
 		linea[len] = '\0';
-		// printf("Stringa: %s\n", linea);
+		printf("Caposcrittore -- Stringa: %s\n", linea);
+		/*
 		char *saveptr;
 		char * token = strtok_r(linea, ".,:; \n\r\t", &saveptr);
 		while( token != NULL){
@@ -118,12 +125,15 @@ void caposcrittore(int numero_scrittori, rwsync *sync, int *stringhe_uniche){
 			xsem_post(&sem_data_items, __LINE__, __FILE__);
 			token = strtok_r(NULL, ".,:; \n\r\t", &saveptr);
 		}
+		*/
 		free(linea);
 	}
-	
+
+
+	/*
 	// mando i segnali di terminazione che sono un puntatore
 	// a NULL
-	for(int i = 0; i<numero_scrittori; i++){
+	for(int i = 0; i<dati->numero_scrittori; i++){
 		xsem_wait(&sem_free_slots, __LINE__, __FILE__);
 		xpthread_mutex_lock(&buffer_access, __LINE__, __FILE__);
 		buffer[pindex%PC_buffer_len] = NULL;
@@ -131,11 +141,16 @@ void caposcrittore(int numero_scrittori, rwsync *sync, int *stringhe_uniche){
 		xpthread_mutex_unlock(&buffer_access, __LINE__, __FILE__);
 		xsem_post(&sem_data_items, __LINE__, __FILE__);
 	}
-	for(int i = 0; i<numero_scrittori; i++){
+	for(int i = 0; i<dati->numero_scrittori; i++){
 		xpthread_join(t[i], NULL, __LINE__, __FILE__);
 	}
+	*/
 	pthread_mutex_destroy(&buffer_access);
+	
 	close(cs);
+	
 	printf("Fine\n");
+	
+	return NULL;
 }
 

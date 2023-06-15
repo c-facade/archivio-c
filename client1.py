@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # client1.py
 
 # qui inviamo la lunghezza della sequenza di byte
@@ -31,3 +32,5 @@ def main(file, host = HOST, port = PORT):
 
 if len(sys.argv) == 2:
     main(sys.argv[1])
+else:
+    print("Uso: client1 file")

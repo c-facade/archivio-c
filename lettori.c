@@ -1,6 +1,5 @@
 #include "xerrori.h"
-#include "hash.h"
-
+#include "lettoriescrittori.h"
 
 #define Capolettore "capolet"
 #define PC_buffer_len 10
@@ -45,8 +44,11 @@ void *lbody(void *args){
 	return NULL;
 }
 
-void capolettore(int numero_lettori, rwsync *sync){
+void *capolettore(void *args){
 
+	dati_capolettore *dati = (dati_capolettore *) args;
+	rwsync * sync = dati->sync;
+	
 	// apro il file di logging
 	
 	FILE *f = xfopen("lettori.log", "w", __LINE__, __FILE__);
@@ -67,8 +69,8 @@ void capolettore(int numero_lettori, rwsync *sync){
 	char *buffer[PC_buffer_len];
 
 	// creo i dati per i thread
-	dati_lettore a[numero_lettori];
-	for(int i = 0; i < numero_lettori; i++){
+	dati_lettore a[dati->numero_lettori];
+	for(int i = 0; i < dati->numero_lettori; i++){
 		a[i].index = &cindex;
 		a[i].buffer = buffer;
 		a[i].sem_free_slots = &sem_free_slots;
@@ -81,15 +83,15 @@ void capolettore(int numero_lettori, rwsync *sync){
 
 	// creo e faccio partire i thread
 	
-	pthread_t t[numero_lettori];
+	pthread_t t[dati->numero_lettori];
 
-	for(int i = 0; i<numero_lettori; i++){
+	for(int i = 0; i<dati->numero_lettori; i++){
 		xpthread_create(&t[i], NULL, &lbody, &a[i], __LINE__, __FILE__);
 	}
 
 	int cl = open(Capolettore, O_RDONLY);
 	// anche qui bisogna usare un termina diverso
-	if(cl < 0) xtermina("Errore apertura capolettore", __LINE__, __FILE__);
+	if(cl < 0) xthread_termina("Errore apertura capolettore", __LINE__, __FILE__);
 	
 	// leggo dalla fifo le stringhe da cercare
 	// e le invio su per il buffer ai lettori
@@ -130,7 +132,7 @@ void capolettore(int numero_lettori, rwsync *sync){
 	}
 	
 	// mando i segnali di terminazione
-	for(int i = 0; i<numero_lettori; i++){
+	for(int i = 0; i<dati->numero_lettori; i++){
 		xsem_wait(&sem_free_slots, __LINE__, __FILE__);
 		xpthread_mutex_lock(&buffer_access, __LINE__, __FILE__);
 		buffer[pindex%PC_buffer_len] = NULL;
@@ -141,7 +143,7 @@ void capolettore(int numero_lettori, rwsync *sync){
 
 	// aspetto che i thread terminino
 	
-	for(int i = 0; i<numero_lettori; i++){
+	for(int i = 0; i<dati->numero_lettori; i++){
 		xpthread_join(t[i], NULL, __LINE__, __FILE__);
 	}
 	xpthread_mutex_destroy(&buffer_access, __LINE__, __FILE__);
@@ -150,5 +152,5 @@ void capolettore(int numero_lettori, rwsync *sync){
 	close(cl);
 	fclose(f);
 	printf("Terminazione capo lettore.\n");
-	return;
+	return NULL;
 }

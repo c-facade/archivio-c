@@ -16,18 +16,26 @@ def gestisci_connessione(file, host = HOST, port = PORT):
     print("gestendo connessione")
     # inizializzazione del socket client
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        # setsockopt?
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.connect((host, port))
         print("Connesso a", s.getpeername())
         b = str.encode("B")
         s.sendall(struct.pack("c", b))
+        print("Inviata la b")
         with open(file, "r") as f:
             for linea in f:
+                print("Inviando linea: ", linea)
                 line = str.encode(linea)
+                print("Line: ", line, "type: ", type(line))
                 lunghezza = len(line)
+                print("Lunghezza:", lunghezza)
                 s.sendall(struct.pack("!i", lunghezza))
+                print("Inviata lunghezza con successo.")
                 for carattere in line:
+                    print("carattere =", carattere, "type=", type(carattere), "len =", len(carattere))
                     s.sendall(struct.pack("b", carattere))
+                print("Linea inviata.")
+            print("Trasferito file.")
             empty = struct.pack("b", str.encode(""))
             s.sendall(empty)
         s.shutdown(socket.SHUT_RDWR)
@@ -43,3 +51,5 @@ def main(file_list):
 if len(sys.argv) > 1:
     print("hello")
     main(sys.argv[1:])
+else:
+    print("uso: client2 file1 file2...")
