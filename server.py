@@ -111,7 +111,7 @@ def gestisci_connessione(conn, addr, cs, cl):
                 # assert lunghezza < 2048
                 if lunghezza == 0:
                     logging.debug("Terminare connessione di tipo B")
-                    break;
+                    break
                 # os.write(cs, data)
                 data = recv_all(conn, lunghezza)
                 stringa = data.decode()
