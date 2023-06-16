@@ -70,9 +70,7 @@ void *caposcrittore(void *args){
 	char * buffer[PC_buffer_len];
 
 
-//	if(e != 0) termina("Errore creazione named pipe");
 
-	/*
 	// creo i dati per i thread
 	dati_scrittore a[dati->numero_scrittori];
 	for(int i = 0; i< dati->numero_scrittori; i++){
@@ -91,7 +89,7 @@ void *caposcrittore(void *args){
 	for(int i = 0; i<dati->numero_scrittori; i++){
 		xpthread_create(&t[i], NULL, &sbody, &a[i], __LINE__, __FILE__);
 	}
-	*/
+	
 	int cs = open(Caposcrittore, O_RDONLY);
 	if(cs < 0) xtermina("Errore apertura pipe caposcrittore", __LINE__, __FILE__);
 	while(true){
@@ -110,7 +108,7 @@ void *caposcrittore(void *args){
 		}
 		linea[len] = '\0';
 		printf("Caposcrittore -- Stringa: %s\n", linea);
-		/*
+		
 		char *saveptr;
 		char * token = strtok_r(linea, ".,:; \n\r\t", &saveptr);
 		while( token != NULL){
@@ -125,12 +123,10 @@ void *caposcrittore(void *args){
 			xsem_post(&sem_data_items, __LINE__, __FILE__);
 			token = strtok_r(NULL, ".,:; \n\r\t", &saveptr);
 		}
-		*/
 		free(linea);
 	}
 
 
-	/*
 	// mando i segnali di terminazione che sono un puntatore
 	// a NULL
 	for(int i = 0; i<dati->numero_scrittori; i++){
@@ -144,7 +140,6 @@ void *caposcrittore(void *args){
 	for(int i = 0; i<dati->numero_scrittori; i++){
 		xpthread_join(t[i], NULL, __LINE__, __FILE__);
 	}
-	*/
 	pthread_mutex_destroy(&buffer_access);
 	
 	close(cs);

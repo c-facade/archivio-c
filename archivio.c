@@ -32,11 +32,13 @@ int main(int argc, char **argv){
 	dati_cs.stringhe_uniche = &stringhe_uniche;
 
 	pthread_t tcl, tcs;
-	xpthread_create(&tcl, NULL, &capolettore, &dati_cl, __LINE__, __FILE__);
+	
 	xpthread_create(&tcs, NULL, &caposcrittore, &dati_cs, __LINE__, __FILE__);
-
-	xpthread_join(tcl, NULL, __LINE__, __FILE__);
+	
+	xpthread_create(&tcl, NULL, &capolettore, &dati_cl, __LINE__, __FILE__);
+	
 	xpthread_join(tcs, NULL, __LINE__, __FILE__);
+	xpthread_join(tcl, NULL, __LINE__, __FILE__);
 	
 	printf("Terminazione.\n Stringhe uniche: %d\n", stringhe_uniche);
 }

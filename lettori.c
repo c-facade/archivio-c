@@ -97,9 +97,15 @@ void *capolettore(void *args){
 	// e le invio su per il buffer ai lettori
 	
 	while(true){
+		
+		printf("Capolettore: leggendo da fifo\n");
+		
 		int len;
 		ssize_t e = read(cl, &len, sizeof(len));
+		
+		printf("Lunshiezza: %d\n", len);
 		if(e == 0) break;
+		
 		
 		char * linea = malloc(sizeof(char)*(len+1));
 		

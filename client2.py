@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import struct, socket, concurrent.futures, threading
 
 HOST = "127.0.0.1"
@@ -28,4 +30,4 @@ def invia_file(file):
             s.sendall(struct.pack("!i", lunghezza))
             s.shutdown(socket.SHUT_RDWR)
 
-main(["file1", "file1"])
+main(["file1", "file2"])

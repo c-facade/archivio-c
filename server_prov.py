@@ -7,6 +7,7 @@ e poi sulla fifo capolet
 
 import sys, os, struct
 import subprocess, signal
+import concurrent.futures
 
 '''
 Funzioni che utilizzo
@@ -23,13 +24,7 @@ Funzioni che utilizzo
 Caposcrittore = "caposc"
 Capolettore = "capolet"
 
-def main(file_scritture1, file_scritture2, file_letture):
-    
-    if not os.path.exists(Caposcrittore):
-        os.mkfifo(Caposcrittore)
-
-#    p = subprocess.Popen(["valgrind", "--leak-check=full", "--show-leak-kinds=all", "--log-file=valgrind-%p.log", "./scrittori.out"])
-
+def scrittore(file_scritture1, file_scritture2):
     # apriamo le pipe
     cs = os.open(Caposcrittore, os.O_WRONLY)
 
@@ -48,10 +43,10 @@ def main(file_scritture1, file_scritture2, file_letture):
             os.write(cs, bs)
             l = str.encode(linea);
             for char in l:
-                # print("Char =", char, "type = ", type(char))
+                # print("char =", char, "type = ", type(char))
                 bs = struct.pack("b", char)
                 os.write(cs, bs)
-
+    
     with open(file_scritture2, "r") as fs:
         for linea in fs:
             # converto la linea in una sequenza di byte
@@ -73,13 +68,9 @@ def main(file_scritture1, file_scritture2, file_letture):
     os.close(cs)
     os.unlink(Caposcrittore)
 
-    # ora diamogli da leggere
-   
-    if not os.path.exists(Capolettore):
-        os.mkfifo(Capolettore)
-    
- #   p = subprocess.Popen(["valgrind", "--leak-check=full", "--show-leak-kinds=all", "--log-file=valgrind-%p.log", "./lettori.out"])
 
+
+def lettore(file_letture):
     cl = os.open(Capolettore, os.O_WRONLY)
 
     with open(file_letture, "r") as fl:
@@ -99,7 +90,23 @@ def main(file_scritture1, file_scritture2, file_letture):
     os.close(cl);
     os.unlink(Capolettore)
 
-# lancio del main
+
+
+def main(file_scritture1, file_scritture2, file_letture):
+    
+    if not os.path.exists(Caposcrittore):
+        os.mkfifo(Caposcrittore)
+
+    # ora diamogli da leggere
+   
+    if not os.path.exists(Capolettore):
+        os.mkfifo(Capolettore)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        executor.submit(scrittore, file_scritture1, file_scritture2)
+        executor.submit(lettore, file_letture)
+
+   # lancio del main
 
 if len(sys.argv)!=4:
     print("Uso:\n\t %s file_scritture1 file_scritture2 file_letture" % sys.argv[0])
