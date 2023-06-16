@@ -1,27 +1,46 @@
 #!/usr/bin/env python3
 
+'''
+server.py
+File python eseguibile che ha i seguenti argomenti:
+    max_threads (numero massimo di thread allo stesso tempo)
+    -r (numero di lettori) (default 3)
+    -w (numero di scrittori) (default 3)
+    -v (per chiamare archivio.c con valgrind)
+
+Questo server riceve delle stringhe da client1 e client2
+via socket, attraverso connessioni di tipo A e B
+Le stringhe ricevute sono inviate via pipe al sottoprocesso
+archivio.c.
+'''
+
 import os, struct, socket, threading, concurrent.futures
+import subprocess, signal, argparse, logging, socket
 
 HOST = "127.0.0.1"
 PORT = 51433
+Caposcrittore = "caposc"
+Capolettore = "capolet"
 
-def main(host = HOST, port=PORT):
+Descrizione = "Questo server fa partire archivio.c come sottoprocesso, riceve stringhe da connessioni di tipo A e B, e le invia ad archivio.c attraverso le pipe capolet e caposc"
+
+def main(max_threads):
    
-    if not os.path.exists("caposc"):
-        os.mkfifo("caposc")
-    if not os.path.exists("capolet"):
-        os.mkfifo("capolet")
+    if not os.path.exists(Caposcrittore):
+        os.mkfifo(Caposcrittore)
+    if not os.path.exists(Capolettore):
+        os.mkfifo(Capolettore)
 
-    cs = os.open("caposc", os.O_WRONLY)
-    cl = os.open("capolet", os.O_WRONLY)
+    cs = os.open(Caposcrittore, os.O_WRONLY)
+    cl = os.open(Capolettore, os.O_WRONLY)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s.bind((host, port))
+            s.bind((HOST, PORT))
             s.listen()
             while(True):
-                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
                     print("In attesa di un client...")
                     conn, addr = s.accept()
                     executor.submit(gestisci_connessione, conn, addr, cs, cl)
@@ -82,4 +101,15 @@ def recv_all(conn, n):
     # print("chunks = ", chunks)
     return chunks
 
-main()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=Descrizione)
+    parser.add_argument("max_threads", help="numero massimo di thread che gestiscono connessioni.", type=int)
+    parser.add_argument("-r", help="numero di thread lettori", type=int, default=3)
+    parser.add_argument("-w", help="numero di thread scrittori", type=int, default=3)
+    parser.add_argument("-v", action="store_true", help="esegui con valgrind")
+    args = parser.parse_args()
+    assert args.max_threads > 0
+    assert args.r > 0
+    assert args.w > 0
+    print(args)
+    main(args.max_threads)
