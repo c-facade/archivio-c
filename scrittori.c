@@ -85,7 +85,6 @@ void *caposcrittore(void *args){
 
 	pthread_t t[dati->numero_scrittori];
 	
-	printf("Caposcrittore fa partire i thread scrittori\n");	
 	for(int i = 0; i<dati->numero_scrittori; i++){
 		xpthread_create(&t[i], NULL, &sbody, &a[i], __LINE__, __FILE__);
 	}
@@ -93,11 +92,10 @@ void *caposcrittore(void *args){
 	int cs = open(Caposcrittore, O_RDONLY);
 	if(cs < 0) xtermina("Errore apertura pipe caposcrittore", __LINE__, __FILE__);
 	while(true){
-		printf("Caposcrittore: leggendo da fifo\n");
 		int len;
 		ssize_t e = read(cs, &len, sizeof(len));
 		if(e == 0) break;
-		printf("Lunghexxa: %d\n", len);
+		// printf("Lunghexxa: %d\n", len);
 		char * linea = malloc(sizeof(char)*(len+1));
 		// in realtà qui ci dovrò mettere un termina
 		// speciale per i thread

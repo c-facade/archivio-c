@@ -16,24 +16,40 @@ archivio.c.
 
 import os, struct, socket, threading, concurrent.futures
 import subprocess, signal, argparse, logging, socket
+import time
 
 HOST = "127.0.0.1"
 PORT = 51433
 Caposcrittore = "caposc"
 Capolettore = "capolet"
+Max_sequence_length = 2048
+# ricorda: in linux, PIPE_BUF è 4096 bytes.
 
 Descrizione = "Questo server fa partire archivio.c come sottoprocesso, riceve stringhe da connessioni di tipo A e B, e le invia ad archivio.c attraverso le pipe capolet e caposc"
 
-def main(max_threads):
-   
+def main(max_threads, readers, writers, valgrind):
+    
+    logging.basicConfig(filename="server.log", level=logging.DEBUG, datefmt="%d/%m/%y %H:%M:%S", format="%(asctime)s - %(levelname)s - %(message)s")
+
+    # se non esistono già crea le pipe
     if not os.path.exists(Caposcrittore):
         os.mkfifo(Caposcrittore)
     if not os.path.exists(Capolettore):
         os.mkfifo(Capolettore)
+   
+    if valgrind:
+        p = subprocess.Popen(["valgrind", "--leak-check=full", "--show-leak-kinds=all", "--log-file=valgrind-%p.log", "./archivio.out", str(readers), str(writers)])
+    else:
+        p = subprocess.Popen(["./archivio.out", str(readers), str(writers), ">", "archivio.log"])
+    
+    logging.debug("Ho fatto partire archivio.")
 
+    # le pipe restano aperte finchè non si dà segnale
+    # di terminazione
     cs = os.open(Caposcrittore, os.O_WRONLY)
     cl = os.open(Capolettore, os.O_WRONLY)
 
+    # ogni connessione ha il suo thread dedicato
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -41,49 +57,56 @@ def main(max_threads):
             s.listen()
             while(True):
                 with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
-                    print("In attesa di un client...")
+                    logging.debug("In attesa di un client...")
                     conn, addr = s.accept()
                     executor.submit(gestisci_connessione, conn, addr, cs, cl)
         except KeyboardInterrupt:
             pass
-        print("Terminazione")
+        logging.debug("server.py -- In terminazione")
         os.close(cs)
         os.close(cl)
+        p.send_signal(signal.SIGTERM)
+        time.sleep(1)
+        logging.debug("Exit code di Archivio o None se non è terminato: %s", p.poll())
+        os.unlink(Caposcrittore)
+        os.unlink(Capolettore)
         s.shutdown(socket.SHUT_RDWR)
+        logging.debug("Server terminato.")
 
 def gestisci_connessione(conn, addr, cs, cl):
+    # questa funzione può gestire connessioni di tipo A e B
     with conn:
-        print(f"{threading.current_thread().name} contattato da {addr}")
+        logging.debug("%s contattato da %s", threading.current_thread().name, addr)
+        # il client invia una 'A' se la connessione è di tipo A
+        # altrimenti una B, subito dopo essersi connesso
         tipo = (struct.unpack("c", recv_all(conn, 1))[0]).decode()
-        print(f"{threading.current_thread().name} tipo: ", tipo)
+        logging.debug("Connessione di tipo %s", tipo)
         if(tipo == 'A'):
+            # per ogni riga si invia la lunghezza
             l = recv_all(conn, 4)
             assert len(l) == 4
-            lunghezza = struct.unpack("!i", l)[0]
-            print("lunghezza =", lunghezza)
-            lun = struct.pack("<i", lunghezza)
-            e1 = os.write(cl, lun)
+            lunghezza = struct.unpack("<i", l)[0]
+            e1 = os.write(cl, l)
             data = recv_all(conn, lunghezza)
             assert len(data) == lunghezza
             stringa = data.decode()
-            print(f"{threading.current_thread().name} Ricevuto:", stringa)
+            # scrivo la stringa sulla pipe
+            # faccio una struct in modo da mandare nella pipe
+            # in modo atomico la lunghezza e la stringa
             e2 = os.write(cl, data)
             print(e1, e2)
         else:
             while True:
                 l = recv_all(conn, 4)
                 assert len(l) == 4
-                lunghezza = struct.unpack("!i", l)[0]
-                print("lunghezza = ", lunghezza)
-                lun = struct.pack("<i", lunghezza)
-                e1 = os.write(cs, lun)
+                lunghezza = struct.unpack("<i", l)[0]
+                e1 = os.write(cs, l)
                 if lunghezza == 0:
-                    print(f"{threading.current_thread().name} Terminare connessione di tipo B")
+                    print("%s Terminare connessione di tipo B", threading.current_thread().name)
                     break
                 data = recv_all(conn, lunghezza)
                 assert len(data) == lunghezza
                 stringa = data.decode()
-                print(f"{threading.current_thread().name} Ricevuto:", stringa)
                 e2 = os.write(cs, data)
                 print(e1, e2)
 
@@ -112,4 +135,4 @@ if __name__ == '__main__':
     assert args.r > 0
     assert args.w > 0
     print(args)
-    main(args.max_threads)
+    main(args.max_threads, args.r, args.w, args.v)

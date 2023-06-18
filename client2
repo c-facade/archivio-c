@@ -21,13 +21,13 @@ def invia_file(file):
             for linea in f:
                 line = linea.encode()
                 lunghezza = len(line);
-                s.sendall(struct.pack("!i", lunghezza))
+                s.sendall(struct.pack("<i", lunghezza))
                 for carattere in line:
                     s.sendall(struct.pack("b", carattere))
                 print(f"{threading.current_thread().name} Inviato con successo.")
             print(f"{threading.current_thread().name} -- Inviato intero file.\n Invio il segnale di terminazione.")
             lunghezza = 0
-            s.sendall(struct.pack("!i", lunghezza))
+            s.sendall(struct.pack("<i", lunghezza))
             s.shutdown(socket.SHUT_RDWR)
 
 main(["file1", "file2"])

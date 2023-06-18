@@ -18,6 +18,7 @@ typedef struct {
 	rwsync *sync;
 } dati_lettore;
 
+
 // corpo di un lettore
 void *lbody(void *args){
 	dati_lettore *a = (dati_lettore *) args;
@@ -35,7 +36,7 @@ void *lbody(void *args){
 		printf("Lettore %d : %s\n", gettid(), s);
 		int occorrenze = conta(s, a->sync);
 		xpthread_mutex_lock(a->file_access, __LINE__, __FILE__);
-		fprintf(a->f, "%s %d (%d)\n", s, occorrenze, gettid());
+		fprintf(a->f, "%s %d\n", s, occorrenze);
 		xpthread_mutex_unlock(a->file_access, __LINE__, __FILE__);
 		free(s);
 	}
@@ -103,8 +104,12 @@ void *capolettore(void *args){
 		int len;
 		ssize_t e = read(cl, &len, sizeof(len));
 		
-		printf("Lunshiezza: %d\n", len);
-		if(e == 0) break;
+
+		// printf("Capolettore -- Lunghezza: %d\n", len);
+		if(e == 0){
+			printf("e == 0\n");
+			break;
+		}
 		
 		
 		char * linea = malloc(sizeof(char)*(len+1));

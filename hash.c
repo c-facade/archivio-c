@@ -44,7 +44,7 @@ void aggiungi(char *s, int *stringhe_uniche, rwsync *sync){
 	sync->writing = true;
 	pthread_mutex_unlock(&sync->mutex);
 
-	printf("Thread %d ha ottenuto il permesso di scrittura.\n", gettid());
+  // printf("Thread %d ha ottenuto il permesso di scrittura.\n", gettid());
 
 	// ora si può scriver
 	ENTRY *item = hsearch(*new, FIND);
@@ -57,7 +57,7 @@ void aggiungi(char *s, int *stringhe_uniche, rwsync *sync){
 	}
 	else{
 		assert(strcmp(new->key, item->key) == 0);
-		printf("La stringa era già presente %d volte\n", *((int *) item->data));
+		//printf("La stringa era già presente %d volte\n", *((int *) item->data));
 		int *d = (int *) item->data;
 		*d += 1;
 		distruggi_entry(new);
@@ -70,7 +70,7 @@ void aggiungi(char *s, int *stringhe_uniche, rwsync *sync){
 	pthread_cond_broadcast(&sync->cond);
 	pthread_mutex_unlock(&sync->mutex);
 
-	printf("Il thread %d ha rilasciato l'accesso in scrittura.\n", gettid());
+	//printf("Il thread %d ha rilasciato l'accesso in scrittura.\n", gettid());
 }
 
 int conta(char *s, rwsync *sync){
@@ -82,18 +82,18 @@ int conta(char *s, rwsync *sync){
 		pthread_cond_wait(&sync->cond, &sync->mutex);
 	sync->readers++;
 	pthread_mutex_unlock(&sync->mutex);
-
+	
+	//printf("Il thread %d ha ottenuto l'accesso in lettura\n", gettid());
 	int occorrenze;
 	// inizio lettura della tabella
 	ENTRY *trovata = hsearch(*item, FIND);
 	if(trovata == NULL){
 		occorrenze = 0;
-		printf("%s -> non trovato\n", s);
+		//printf("%s -> non trovato\n", s);
 	}
 	else{
 		occorrenze = *((int*) trovata->data);
-		printf("%s -> Occorrenze: %d\n", s, occorrenze);
-		printf("%s -> trovata->data: %d\n", s, *((int *) trovata->data));
+		//printf("%s -> Occorrenze: %d\n", s, occorrenze);
 	}
 	// termine lettura in tabella
 	assert(sync->readers > 0);
@@ -103,7 +103,8 @@ int conta(char *s, rwsync *sync){
 	if(sync->readers == 0)
 		pthread_cond_signal(&sync->cond); // segnalando ad un solo writer
 	pthread_mutex_unlock(&sync->mutex);
-	
+
+	//printf("Il thread %d ha rilasciato l'accesso in lettura\n", gettid());
 	distruggi_entry(item);
 	return occorrenze;
 }
