@@ -83,32 +83,33 @@ def gestisci_connessione(conn, addr, cs, cl):
         logging.debug("Connessione di tipo %s", tipo)
         if(tipo == 'A'):
             # per ogni riga si invia la lunghezza
-            l = recv_all(conn, 4)
-            assert len(l) == 4
-            lunghezza = struct.unpack("<i", l)[0]
-            e1 = os.write(cl, l)
+            l = recv_all(conn, 2)
+            assert len(l) == 2
+            lunghezza = struct.unpack("<h", l)[0]
             data = recv_all(conn, lunghezza)
             assert len(data) == lunghezza
             stringa = data.decode()
             # scrivo la stringa sulla pipe
             # faccio una struct in modo da mandare nella pipe
             # in modo atomico la lunghezza e la stringa
-            e2 = os.write(cl, data)
-            print(e1, e2)
+            packet = struct.pack(f"<h{lunghezza}s", lunghezza, data)
+            logging.debug("mandando:", packet, "su caposcrittore");
+            e = os.write(cl, packet)
+            print(e)
         else:
             while True:
-                l = recv_all(conn, 4)
-                assert len(l) == 4
-                lunghezza = struct.unpack("<i", l)[0]
-                e1 = os.write(cs, l)
+                l = recv_all(conn, 2)
+                assert len(l) == 2
+                lunghezza = struct.unpack("<h", l)[0]
                 if lunghezza == 0:
                     print("%s Terminare connessione di tipo B", threading.current_thread().name)
                     break
                 data = recv_all(conn, lunghezza)
                 assert len(data) == lunghezza
-                stringa = data.decode()
-                e2 = os.write(cs, data)
-                print(e1, e2)
+                packet = struct.pack(f"<h{lunghezza}s", lunghezza, data)
+                logging.debug("Mandando", packet, "su caposcrittore")
+                e = os.write(cs, packet)
+                print(e)
 
 
 def recv_all(conn, n):

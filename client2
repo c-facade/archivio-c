@@ -21,7 +21,7 @@ def invia_file(file):
             for linea in f:
                 line = linea.encode()
                 lunghezza = len(line);
-                s.sendall(struct.pack("<i", lunghezza))
+                s.sendall(struct.pack("<h", lunghezza))
                 for carattere in line:
                     s.sendall(struct.pack("b", carattere))
                 print(f"{threading.current_thread().name} Inviato con successo.")

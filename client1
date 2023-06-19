@@ -24,7 +24,7 @@ def main(file, host = HOST, port = PORT):
                 # pronto per inviare la richiesta
                 a = str.encode("A")
                 s.sendall(struct.pack("c", a))
-                s.sendall(struct.pack("<i", lunghezza))
+                s.sendall(struct.pack("<h", lunghezza))
                 for carattere in line:
                     s.sendall(struct.pack("b", carattere))
                 s.shutdown(socket.SHUT_RDWR)

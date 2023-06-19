@@ -32,9 +32,10 @@ void *segnali_body(void *args) {
 		}
 		if(s == SIGTERM){
 			a->continua = false;
-			return NULL;
+			break;
 		}
 	}
+	return NULL;
 }
 
 

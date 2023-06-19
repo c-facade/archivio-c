@@ -92,15 +92,15 @@ void *caposcrittore(void *args){
 	int cs = open(Caposcrittore, O_RDONLY);
 	if(cs < 0) xtermina("Errore apertura pipe caposcrittore", __LINE__, __FILE__);
 	while(true){
-		int len;
+		short int len;
 		ssize_t e = read(cs, &len, sizeof(len));
 		if(e == 0) break;
-		// printf("Lunghexxa: %d\n", len);
+		printf("Caposcrittore -- Lunghezza: %hd\n", len);
 		char * linea = malloc(sizeof(char)*(len+1));
 		if(linea == NULL) xthread_termina("Spazio esaurito", __LINE__, __FILE__);
 		for(int i = 0; i<len; i++){
 			e = read(cs, &(linea[i]), sizeof(char));
-			if(e == 0) xthread_termina("Errore lettura da FIFO");
+			if(e == 0) xthread_termina("Errore lettura da FIFO", __LINE__, __FILE__);
 		}
 		linea[len] = '\0';
 		printf("Caposcrittore -- Stringa: %s\n", linea);

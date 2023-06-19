@@ -101,11 +101,11 @@ void *capolettore(void *args){
 		
 		printf("Capolettore: leggendo da fifo\n");
 		
-		int len;
+		short int len;
 		ssize_t e = read(cl, &len, sizeof(len));
 		
 
-		// printf("Capolettore -- Lunghezza: %d\n", len);
+		printf("Capolettore -- Lunghezza: %d\n", len);
 		if(e == 0){
 			printf("e == 0\n");
 			break;
@@ -121,7 +121,9 @@ void *capolettore(void *args){
 		}
 
 		linea[len] = '\0';
-
+		
+		printf("Capolettore -- ricevuto: %s", linea);
+		
 		char *saveptr;
 		char * token = strtok_r(linea, ".,:; \n\r\t", &saveptr);
 		while( token != NULL){
