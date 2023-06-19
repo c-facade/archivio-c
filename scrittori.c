@@ -97,12 +97,10 @@ void *caposcrittore(void *args){
 		if(e == 0) break;
 		// printf("Lunghexxa: %d\n", len);
 		char * linea = malloc(sizeof(char)*(len+1));
-		// in realtà qui ci dovrò mettere un termina
-		// speciale per i thread
 		if(linea == NULL) xthread_termina("Spazio esaurito", __LINE__, __FILE__);
 		for(int i = 0; i<len; i++){
 			e = read(cs, &(linea[i]), sizeof(char));
-			if(e == 0) exit(1);
+			if(e == 0) xthread_termina("Errore lettura da FIFO");
 		}
 		linea[len] = '\0';
 		printf("Caposcrittore -- Stringa: %s\n", linea);
