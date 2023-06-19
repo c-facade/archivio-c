@@ -4,14 +4,7 @@
 #define Caposcrittore "caposc"
 #define PC_buffer_len 10
 
-// iniziamo con una versione molto semplice in cui il
-// capo scrittore invia le stringhe e gli scrittori le leggono
-
-// NOTE DAL FORUM
-// Le condition variables vanno usate obbligatoriamente per gestire
-// i lettori e scrittori concorrenti nel loro accesso alla
-// tabella hash condivisa, secondo quello che abbiamo visto
-// a lezione
+// corpo del thread capo scrittore e dei threads scrittori
 
 typedef struct {
 	int *index;
@@ -53,6 +46,9 @@ void *sbody(void *args){
 
 void *caposcrittore(void *args){
 	
+	// dati_caposcrittore contiene la struct sync
+	// il numero di scrittori
+	// e il numero di stringhe uniche
 	printf("Inizio caposcrittore\n");
 	dati_caposcrittore *dati = (dati_caposcrittore *) args;
 	rwsync *sync = dati->sync;
@@ -68,7 +64,6 @@ void *caposcrittore(void *args){
 	int pindex = 0;
 	int cindex = 0;
 	char * buffer[PC_buffer_len];
-
 
 
 	// creo i dati per i thread

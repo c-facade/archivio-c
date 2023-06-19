@@ -4,8 +4,7 @@
 #define Capolettore "capolet"
 #define PC_buffer_len 10
 
-// Facciamo la stessa prova che con gli scrittori
-// con l'aggiunta che si scrive sul file lettori.log
+// codice di capolettore e dei threads lettori
 
 typedef struct {
 	int *index;
@@ -24,6 +23,7 @@ void *lbody(void *args){
 	dati_lettore *a = (dati_lettore *) args;
 
 	while(true){
+		// ricevo il puntatore a stringa
 		xsem_wait(a->sem_data_items, __LINE__, __FILE__);
 		xpthread_mutex_lock(a->buffer_access, __LINE__, __FILE__);
 			char *s = a->buffer[*(a->index)%PC_buffer_len];
@@ -34,7 +34,9 @@ void *lbody(void *args){
 		if(s == NULL) break;
 		// stampo il dato che ho ricevuto
 		printf("Lettore %d : %s\n", gettid(), s);
+		// chiamo la funzione conta
 		int occorrenze = conta(s, a->sync);
+		// scrivo le occorrenze su lettori.log
 		xpthread_mutex_lock(a->file_access, __LINE__, __FILE__);
 		fprintf(a->f, "%s %d\n", s, occorrenze);
 		xpthread_mutex_unlock(a->file_access, __LINE__, __FILE__);
@@ -47,6 +49,9 @@ void *lbody(void *args){
 
 void *capolettore(void *args){
 
+	// gli argomenti sono sync, la struct di sincronizzazione
+	// e il numero di lettori
+	
 	dati_capolettore *dati = (dati_capolettore *) args;
 	rwsync * sync = dati->sync;
 	

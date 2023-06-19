@@ -14,8 +14,6 @@ typedef struct{
 // inizializza la struct di sincronizzazione
 void init_rwsync(rwsync *sync);
 
-void xthread_termina(char *msg, int linea, char *file);
-
 ENTRY *crea_entry(char *s);
 
 void distruggi_entry(ENTRY *e);

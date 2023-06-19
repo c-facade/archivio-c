@@ -40,7 +40,7 @@ def main(max_threads, readers, writers, valgrind):
     if valgrind:
         p = subprocess.Popen(["valgrind", "--leak-check=full", "--show-leak-kinds=all", "--log-file=valgrind-%p.log", "./archivio.out", str(readers), str(writers)])
     else:
-        p = subprocess.Popen(["./archivio.out", str(readers), str(writers), ">", "archivio.log"])
+        p = subprocess.Popen(["./archivio.out", str(readers), str(writers)])
     
     logging.debug("Ho fatto partire archivio.")
 
@@ -63,13 +63,19 @@ def main(max_threads, readers, writers, valgrind):
         except KeyboardInterrupt:
             pass
         logging.debug("server.py -- In terminazione")
+        # chiude le pipe
+        # causando a caposcrittore e capolettore di terminare
         os.close(cs)
         os.close(cl)
+        # invia sigterm al main di archivio.c
         p.send_signal(signal.SIGTERM)
+        # attende la terminazione
         time.sleep(1)
         logging.debug("Exit code di Archivio o None se non è terminato: %s", p.poll())
+        # elimina le pipe
         os.unlink(Caposcrittore)
         os.unlink(Capolettore)
+        # chiude il server
         s.shutdown(socket.SHUT_RDWR)
         logging.debug("Server terminato.")
 
@@ -81,11 +87,13 @@ def gestisci_connessione(conn, addr, cs, cl):
         # altrimenti una B, subito dopo essersi connesso
         tipo = (struct.unpack("c", recv_all(conn, 1))[0]).decode()
         logging.debug("Connessione di tipo %s", tipo)
+        bytes_inviati = 0
         if(tipo == 'A'):
             # per ogni riga si invia la lunghezza
             l = recv_all(conn, 2)
             assert len(l) == 2
             lunghezza = struct.unpack("<h", l)[0]
+            assert lunghezza < Max_sequence_length
             data = recv_all(conn, lunghezza)
             assert len(data) == lunghezza
             stringa = data.decode()
@@ -93,9 +101,10 @@ def gestisci_connessione(conn, addr, cs, cl):
             # faccio una struct in modo da mandare nella pipe
             # in modo atomico la lunghezza e la stringa
             packet = struct.pack(f"<h{lunghezza}s", lunghezza, data)
-            logging.debug("mandando:", packet, "su caposcrittore");
+            logging.debug("mandando: %s su caposcrittore", packet);
             e = os.write(cl, packet)
             print(e)
+            bytes_inviati = bytes_inviati + e
         else:
             while True:
                 l = recv_all(conn, 2)
@@ -104,12 +113,15 @@ def gestisci_connessione(conn, addr, cs, cl):
                 if lunghezza == 0:
                     print("%s Terminare connessione di tipo B", threading.current_thread().name)
                     break
+                assert lunghezza < Max_sequence_length
                 data = recv_all(conn, lunghezza)
                 assert len(data) == lunghezza
                 packet = struct.pack(f"<h{lunghezza}s", lunghezza, data)
-                logging.debug("Mandando", packet, "su caposcrittore")
+                logging.debug("Mandando %s su caposcrittore", packet)
                 e = os.write(cs, packet)
                 print(e)
+                bytes_inviati = bytes_inviati + e
+        debug.logging("Connessione di tipo %s, inviati %s bytes", tipo, bytes_inviati)
 
 
 def recv_all(conn, n):

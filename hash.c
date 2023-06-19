@@ -8,11 +8,6 @@ void init_rwsync(rwsync *sync)
 	xpthread_mutex_init(&sync->mutex, NULL, __LINE__, __FILE__);
 }
 
-void xthread_termina(char *msg, int linea, char *file){
-	fprintf(stderr, "%s == %d == Linea: %d, File: %s\n", msg, getpid(), linea, file);
-	pthread_exit(NULL);
-}
-
 ENTRY *crea_entry(char *s){
 	ENTRY *e = malloc(sizeof(ENTRY));
 	int n = 1;
@@ -36,23 +31,28 @@ void distruggi_entry(ENTRY *e){
 
 void aggiungi(char *s, int *stringhe_uniche, rwsync *sync){
 	ENTRY *new = crea_entry(s);
-	// inizio scrittura in tabella
-
+	
+	// richiedo l'accesso in scrittura
 	pthread_mutex_lock(&sync->mutex);
 	while(sync->writing || sync->readers>0)
 		pthread_cond_wait(&sync->cond, &sync->mutex);
 	sync->writing = true;
 	pthread_mutex_unlock(&sync->mutex);
 
-  // printf("Thread %d ha ottenuto il permesso di scrittura.\n", gettid());
+  	// printf("Thread %d ha ottenuto il permesso di scrittura.\n", gettid());
 
-	// ora si può scriver
+	// Inizio scrittura in tabella
+	
+	// cerco la stringa nella tabella
 	ENTRY *item = hsearch(*new, FIND);
+	// se non è presente la inserisco
 	if(item == NULL){
 		ENTRY *success = hsearch(*new, ENTER);
-		// solo uno scrittore alla volta quindi non ci sono
-		// problemi con questa variabile
+		// aumento il numero di stringhe uniche nella parte critic
 		(*stringhe_uniche)++;
+		// verifico se l'inserimento ha avuto successo
+		// altrimenti lancio un errore e termino lo scrittore
+		// corrente
 		if(success == NULL) xthread_termina("errore inserimento in tabella", __LINE__, __FILE__);
 	}
 	else{
@@ -93,7 +93,6 @@ int conta(char *s, rwsync *sync){
 	}
 	else{
 		occorrenze = *((int*) trovata->data);
-		//printf("%s -> Occorrenze: %d\n", s, occorrenze);
 	}
 	// termine lettura in tabella
 	assert(sync->readers > 0);

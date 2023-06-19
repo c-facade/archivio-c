@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 
+'''
+Riceve una lista di files da linea di comando
+Invia i loro contenuti tramite server socket
+'''
+
 import struct, socket, concurrent.futures, threading
+import os, sys
 
 HOST = "127.0.0.1"
 PORT = 51433
@@ -11,6 +17,9 @@ def main(file_list):
             executor.submit(invia_file, file)
 
 def invia_file(file):
+    if not os.path.exists(file):
+        print("Il file %s non esiste", file)
+        return
     with open(file, "r") as f:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((HOST, PORT))
@@ -30,4 +39,7 @@ def invia_file(file):
             s.sendall(struct.pack("<i", lunghezza))
             s.shutdown(socket.SHUT_RDWR)
 
-main(["file1", "file2"])
+if len(sys.argv) < 2:
+    print("Uso: client2 file1, file2 ...")
+else:
+    main(sys.argv[1:])
