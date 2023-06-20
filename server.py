@@ -29,7 +29,7 @@ Descrizione = "Questo server fa partire archivio.c come sottoprocesso, riceve st
 
 def main(max_threads, readers, writers, valgrind):
     
-    logging.basicConfig(filename="server.log", level=logging.DEBUG, datefmt="%d/%m/%y %H:%M:%S", format="%(asctime)s - %(levelname)s - %(message)s")
+    logging.basicConfig(filename="server.log", level=logging.INFO, datefmt="%d/%m/%y %H:%M:%S", format="%(asctime)s - %(levelname)s - %(message)s")
 
     # se non esistono già crea le pipe
     if not os.path.exists(Caposcrittore):
@@ -58,7 +58,7 @@ def main(max_threads, readers, writers, valgrind):
             s.listen()
             while(True):
                 with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
-                    logging.debug("In attesa di un client...")
+                    #logging.debug("In attesa di un client...")
                     conn, addr = s.accept()
                     executor.submit(gestisci_connessione, conn, addr, cs, cl)
         except KeyboardInterrupt:
@@ -87,7 +87,7 @@ def gestisci_connessione(conn, addr, cs, cl):
         # il client invia una 'A' se la connessione è di tipo A
         # altrimenti una B, subito dopo essersi connesso
         tipo = (struct.unpack("c", recv_all(conn, 1))[0]).decode()
-        logging.debug("Connessione di tipo %s", tipo)
+        #logging.debug("Connessione di tipo %s", tipo)
         bytes_inviati = 0
         if(tipo == 'A'):
             # per ogni riga si invia la lunghezza
@@ -105,14 +105,12 @@ def gestisci_connessione(conn, addr, cs, cl):
             logging.debug("mandando: %s su capolet", packet);
             e = os.write(cl, packet)
             bytes_inviati = bytes_inviati + int(e)
-            print(bytes_inviati)
         else:
             while True:
                 l = recv_all(conn, 2)
                 assert len(l) == 2
                 lunghezza = struct.unpack("<h", l)[0]
                 if lunghezza == 0:
-                    print("%s Terminare connessione di tipo B", threading.current_thread().name)
                     break
                 assert lunghezza < Max_sequence_length
                 data = recv_all(conn, lunghezza)
@@ -121,8 +119,7 @@ def gestisci_connessione(conn, addr, cs, cl):
                 logging.debug("Mandando %s su caposc", packet)
                 e = os.write(cs, packet)
                 bytes_inviati = bytes_inviati + int(e)
-                print(bytes_inviati)
-        logging.debug("Connessione di tipo %s, inviati %s bytes", tipo, bytes_inviati)
+        logging.info("Connessione di tipo %s, inviati %s bytes", tipo, bytes_inviati)
 
 
 def recv_all(conn, n):
@@ -130,12 +127,10 @@ def recv_all(conn, n):
     bytes_recd = 0
     while bytes_recd < n:
         chunk = conn.recv(min(n- bytes_recd, 1024))
-        #print("chunk = ", chunk)
         if len(chunk) == 0:
             raise RuntimeError("socket connection broken")
         chunks += chunk
         bytes_recd = bytes_recd + len(chunk)
-    # print("chunks = ", chunks)
     return chunks
 
 if __name__ == '__main__':
@@ -148,5 +143,4 @@ if __name__ == '__main__':
     assert args.max_threads > 0
     assert args.r > 0
     assert args.w > 0
-    print(args)
     main(args.max_threads, args.r, args.w, args.v)

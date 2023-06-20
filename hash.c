@@ -100,7 +100,8 @@ int conta(char *s, rwsync *sync){
 	pthread_mutex_lock(&sync->mutex);
 	sync->readers--;
 	if(sync->readers == 0)
-		pthread_cond_signal(&sync->cond); // segnalando ad un solo writer
+		pthread_cond_signal(&sync->cond); 
+		// segnalando ad un solo writer
 	pthread_mutex_unlock(&sync->mutex);
 
 	//printf("Il thread %d ha rilasciato l'accesso in lettura\n", gettid());

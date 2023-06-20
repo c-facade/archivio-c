@@ -18,10 +18,8 @@ def main(file, host = HOST, port = PORT):
             lunghezza = len(line)
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                # la prossima chiamata è blocking
                 s.connect((host, port))
-                print("Connesso a ", s.getpeername())
-                # pronto per inviare la richiesta
+                # print("Connesso a ", s.getpeername())
                 a = str.encode("A")
                 s.sendall(struct.pack("c", a))
                 s.sendall(struct.pack("<h", lunghezza))

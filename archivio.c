@@ -1,8 +1,8 @@
 #include "lettoriescrittori.h"
 
-// questo file contiene il main
-// chiama il capolettore e il caposcrittore
-// gestisce i segnali
+// questo file contiene il main e il corpo del signal handler
+// il main chiama il capolettore e il caposcrittore
+// e il thread gestore di segnali
 
 #define Num_elem 1000000
 
@@ -13,28 +13,9 @@ typedef struct{
 	bool continua;
 } dati_gs;
 
-// corpo del gestore di segnali
-void *gs_body(void *args) {
-	dati_gs *a = (dati_gs *) args;
-	printf("Partenza gestore segnali\n");
-	
-	sigset_t mask;
-	sigfillset(&mask);
-	int s;
-	while(true) {
-		int e = sigwait(&mask, &s);
-		if(e != 0) perror("Errore sigwait");
-		if(s == SIGINT){
-			printf("Stringhe uniche: %d\n", *(a->stringhe_uniche));
-		}
-		if(s == SIGTERM){
-			a->continua = false;
-			break;
-		}
-	}
-	return NULL;
-}
 
+// corpo del gestore di segnali
+void *gs_body(void *args);
 
 
 int main(int argc, char **argv){
@@ -102,8 +83,48 @@ int main(int argc, char **argv){
 	xpthread_join(tcl, NULL, __LINE__, __FILE__);
 	xpthread_join(gestore_segnali, NULL, __LINE__, __FILE__);
 	
-	printf("Terminazione archivio.\nStringhe uniche: %d\n", stringhe_uniche);
+	//printf("Terminazione archivio.\nStringhe uniche: %d\n", stringhe_uniche);
+	printf("%d\n", stringhe_uniche);
 	return 0;
 }
 
 
+// corpo del gestore di segnali
+void *gs_body(void *args) {
+	dati_gs *a = (dati_gs *) args;
+	//printf("Partenza gestore segnali\n");
+	
+	sigset_t mask;
+	sigfillset(&mask);
+	int s;
+	while(true) {
+		int e = sigwait(&mask, &s);
+		if(e != 0) perror("Errore sigwait");
+		if(s == SIGINT){
+			char buffer[12];
+			int numero = *(a->stringhe_uniche);
+			// conversione in stringa
+			int i = 0;
+			do{
+				buffer[i] = numero % 10 + '0';
+				i++;
+				numero = numero / 10;
+			} while(numero > 0 && i < 11);
+			buffer[i] = '\n';
+			int len = i+1;
+			i--;
+			for(int j = 0; j<i; j++, i--){
+				char c = buffer[i];
+				buffer[i] = buffer[j];
+				buffer[j] = c;
+			}
+			// e stampo la stringa ottenuta
+			write(STDOUT_FILENO, buffer, len);
+		}
+		if(s == SIGTERM){
+			a->continua = false;
+			break;
+		}
+	}
+	return NULL;
+}

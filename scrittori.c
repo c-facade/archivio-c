@@ -21,7 +21,7 @@ typedef struct {
 void *sbody(void *args){
 	dati_scrittore *a = (dati_scrittore *) args;
 	
-	printf("Inizio scrittore %d\n", gettid());
+	//printf("Inizio scrittore %d\n", gettid());
 	while(true){
 		xsem_wait(a->sem_data_items, __LINE__, __FILE__);
 		xpthread_mutex_lock(a->buffer_access, __LINE__, __FILE__);
@@ -31,15 +31,15 @@ void *sbody(void *args){
 		xsem_post(a->sem_free_slots, __LINE__, __FILE__);
 		// il segnale di terminazione è s = NULL
 		if(s == NULL){
-			printf("Lo scrittore %d ha ricevuto una stringa NULL e ha terminato.\n", gettid());
+			//printf("Lo scrittore %d ha ricevuto una stringa NULL\n", gettid());
 			break;
 		}
-		printf("%d : %s\n", gettid(), s);
+		//printf("%d : %s\n", gettid(), s);
 		aggiungi(s, a->stringhe_uniche, a->sync);
 		free(s);
 	}
 
-	printf("Thread scrittore %d sta terminando\n", gettid());
+	//printf("Thread scrittore %d sta terminando\n", gettid());
 	return NULL;
 }
 
@@ -49,7 +49,7 @@ void *caposcrittore(void *args){
 	// dati_caposcrittore contiene la struct sync
 	// il numero di scrittori
 	// e il numero di stringhe uniche
-	printf("Inizio caposcrittore\n");
+	//printf("Inizio caposcrittore\n");
 	dati_caposcrittore *dati = (dati_caposcrittore *) args;
 	rwsync *sync = dati->sync;
 	// inizializzamo semafori e mutex
@@ -90,7 +90,7 @@ void *caposcrittore(void *args){
 		short int len;
 		ssize_t e = read(cs, &len, sizeof(len));
 		if(e == 0) break;
-		printf("Caposcrittore -- Lunghezza: %hd\n", len);
+		//printf("Caposcrittore -- Lunghezza: %hd\n", len);
 		char * linea = malloc(sizeof(char)*(len+1));
 		if(linea == NULL) xthread_termina("Spazio esaurito", __LINE__, __FILE__);
 		for(int i = 0; i<len; i++){
@@ -98,7 +98,7 @@ void *caposcrittore(void *args){
 			if(e == 0) xthread_termina("Errore lettura da FIFO", __LINE__, __FILE__);
 		}
 		linea[len] = '\0';
-		printf("Caposcrittore -- Stringa: %s\n", linea);
+		//printf("Caposcrittore -- Stringa: %s\n", linea);
 		
 		char *saveptr;
 		char * token = strtok_r(linea, ".,:; \n\r\t", &saveptr);
@@ -135,7 +135,7 @@ void *caposcrittore(void *args){
 	
 	close(cs);
 	
-	printf("Fine\n");
+	//printf("Fine caposcrittore\n");
 	
 	return NULL;
 }

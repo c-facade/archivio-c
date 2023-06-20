@@ -33,7 +33,7 @@ void *lbody(void *args){
 		// il puntatore a NULL è il segnale di terminazione
 		if(s == NULL) break;
 		// stampo il dato che ho ricevuto
-		printf("Lettore %d : %s\n", gettid(), s);
+		//printf("Lettore %d : %s\n", gettid(), s);
 		// chiamo la funzione conta
 		int occorrenze = conta(s, a->sync);
 		// scrivo le occorrenze su lettori.log
@@ -43,7 +43,7 @@ void *lbody(void *args){
 		free(s);
 	}
 
-	printf("Thread lettore %d sta terminando\n", gettid());
+	//printf("Thread lettore %d sta terminando\n", gettid());
 	return NULL;
 }
 
@@ -104,18 +104,14 @@ void *capolettore(void *args){
 	
 	while(true){
 		
-		printf("Capolettore: leggendo da fifo\n");
-		
+		//printf("Capolettore: leggendo da fifo\n");
 		short int len;
 		ssize_t e = read(cl, &len, sizeof(len));
 		
-
-		printf("Capolettore -- Lunghezza: %d\n", len);
+		//printf("Capolettore -- Lunghezza: %d\n", len);
 		if(e == 0){
-			printf("e == 0\n");
 			break;
 		}
-		
 		
 		char * linea = malloc(sizeof(char)*(len+1));
 		
@@ -127,7 +123,7 @@ void *capolettore(void *args){
 
 		linea[len] = '\0';
 		
-		printf("Capolettore -- ricevuto: %s", linea);
+		//printf("Capolettore -- ricevuto: %s", linea);
 		
 		char *saveptr;
 		char * token = strtok_r(linea, ".,:; \n\r\t", &saveptr);
@@ -169,6 +165,6 @@ void *capolettore(void *args){
 
 	close(cl);
 	fclose(f);
-	printf("Terminazione capo lettore.\n");
+	//printf("Terminazione capo lettore.\n");
 	return NULL;
 }
