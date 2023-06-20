@@ -39,7 +39,7 @@ void aggiungi(char *s, int *stringhe_uniche, rwsync *sync){
 	sync->writing = true;
 	pthread_mutex_unlock(&sync->mutex);
 
-  	// printf("Thread %d ha ottenuto il permesso di scrittura.\n", gettid());
+  // printf("Thread %d ha ottenuto il permesso di scrittura.\n", gettid());
 
 	// Inizio scrittura in tabella
 	

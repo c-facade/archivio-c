@@ -38,9 +38,9 @@ def main(max_threads, readers, writers, valgrind):
         os.mkfifo(Capolettore)
    
     if valgrind:
-        p = subprocess.Popen(["valgrind", "--leak-check=full", "--show-leak-kinds=all", "--log-file=valgrind-%p.log", "./archivio.out", str(readers), str(writers)])
+        p = subprocess.Popen(["valgrind", "--leak-check=full", "--show-leak-kinds=all", "--log-file=valgrind-%p.log", "./archivio", str(readers), str(writers)])
     else:
-        p = subprocess.Popen(["./archivio.out", str(readers), str(writers)])
+        p = subprocess.Popen(["./archivio", str(readers), str(writers)])
         pass
 
     logging.debug("Ho fatto partire archivio.")
