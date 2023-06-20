@@ -4,11 +4,11 @@ CC=gcc
 CFLAGS=-std=c11 -Wall -g -O -pthread
 LDLIBS=-lm -lrt -pthread
 
-all: archivio.out
+all: archivio
 
-archivio.out: archivio.c xerrori.c scrittori.c lettori.c hash.c
+archivio: archivio.c xerrori.c scrittori.c lettori.c hash.c
 	$(CC) $(CFLAGS) $^ -o $@ $(LDLIBS)
 
 clean:
-	rm -f *.o *.out
+	rm -f *.o *.out *.log
 
