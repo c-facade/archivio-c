@@ -41,7 +41,8 @@ def main(max_threads, readers, writers, valgrind):
         p = subprocess.Popen(["valgrind", "--leak-check=full", "--show-leak-kinds=all", "--log-file=valgrind-%p.log", "./archivio.out", str(readers), str(writers)])
     else:
         p = subprocess.Popen(["./archivio.out", str(readers), str(writers)])
-    
+        pass
+
     logging.debug("Ho fatto partire archivio.")
 
     # le pipe restano aperte finchè non si dà segnale
@@ -101,10 +102,10 @@ def gestisci_connessione(conn, addr, cs, cl):
             # faccio una struct in modo da mandare nella pipe
             # in modo atomico la lunghezza e la stringa
             packet = struct.pack(f"<h{lunghezza}s", lunghezza, data)
-            logging.debug("mandando: %s su caposcrittore", packet);
+            logging.debug("mandando: %s su capolet", packet);
             e = os.write(cl, packet)
-            print(e)
-            bytes_inviati = bytes_inviati + e
+            bytes_inviati = bytes_inviati + int(e)
+            print(bytes_inviati)
         else:
             while True:
                 l = recv_all(conn, 2)
@@ -117,11 +118,11 @@ def gestisci_connessione(conn, addr, cs, cl):
                 data = recv_all(conn, lunghezza)
                 assert len(data) == lunghezza
                 packet = struct.pack(f"<h{lunghezza}s", lunghezza, data)
-                logging.debug("Mandando %s su caposcrittore", packet)
+                logging.debug("Mandando %s su caposc", packet)
                 e = os.write(cs, packet)
-                print(e)
-                bytes_inviati = bytes_inviati + e
-        debug.logging("Connessione di tipo %s, inviati %s bytes", tipo, bytes_inviati)
+                bytes_inviati = bytes_inviati + int(e)
+                print(bytes_inviati)
+        logging.debug("Connessione di tipo %s, inviati %s bytes", tipo, bytes_inviati)
 
 
 def recv_all(conn, n):

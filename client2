@@ -36,7 +36,7 @@ def invia_file(file):
                 print(f"{threading.current_thread().name} Inviato con successo.")
             print(f"{threading.current_thread().name} -- Inviato intero file.\n Invio il segnale di terminazione.")
             lunghezza = 0
-            s.sendall(struct.pack("<i", lunghezza))
+            s.sendall(struct.pack("<h", lunghezza))
             s.shutdown(socket.SHUT_RDWR)
 
 if len(sys.argv) < 2:
